@@ -1,0 +1,146 @@
+import pandas as pd
+import random
+import smtplib
+
+class Product:
+    def __init__(self, product_id, name, price, stock):
+        self.product_id = product_id
+        self.name = name
+        self.price = price
+        self.stock = stock
+
+    def __str__(self):
+        return f"{self.name} (ID: {self.product_id}) - ${self.price} - Stock: {self.stock}"
+
+
+class User:
+    def __init__(self, email):
+        self.email = email
+        self.cart = {}
+
+    def add_to_cart(self, product, quantity):
+        if product.product_id in self.cart:
+            self.cart[product.product_id] += quantity
+        else:
+            self.cart[product.product_id] = quantity
+        product.stock -= quantity
+
+    def view_cart(self, products):
+        print("Cart Contents:")
+        total = 0
+        for product_id, quantity in self.cart.items():
+            product = products[product_id]
+            print(f"{product.name} - {quantity} x ${product.price} = ${quantity * product.price}")
+            total += quantity * product.price
+        print(f"Total: ${total}")
+
+    def checkout(self, products):
+        total = 0
+        receipt = "Receipt:\n"
+        for product_id, quantity in self.cart.items():
+            product = products[product_id]
+            receipt += f"{product.name} - {quantity} x ${product.price} = ${quantity * product.price}\n"
+            total += quantity * product.price
+        receipt += f"Total: ${total}\n"
+        self.cart.clear()
+        return receipt
+
+
+class Supermarket:
+    def __init__(self):
+        self.products = {}
+        self.users = {}
+
+    def add_product(self, product):
+        self.products[product.product_id] = product
+
+    def view_products(self):
+        print("Available Products:")
+        for product in self.products.values():
+            print(product)
+
+    def register_user(self, email):
+        if email not in self.users:
+            self.users[email] = User(email)
+            print(f"User registered with email: {email}")
+            return True
+        else:
+            print("User already registered.")
+            return False
+
+    def send_email(self, recipient, subject, body):
+        sender_email = "akalyatamilselvi2004@gmail.com"
+        sender_password = "akalya2004"
+        message = MIMEMultipart()
+        message["From"] = sender_email
+        message["To"] = recipient
+        message["Subject"] = subject
+        message.attach(MIMEText(body, "plain"))
+        try:
+            with smtplib.SMTP("smtp.example.com", 587) as server:
+                server.starttls()
+                server.login(sender_email, sender_password)
+                server.sendmail(sender_email, recipient, message.as_string())
+            print(f"Email sent to {recipient}")
+        except Exception as e:
+            print(f"Failed to send email: {e}")
+
+
+def main():
+    supermarket = Supermarket()
+
+    # Adding initial products
+    products = [
+        Product(1, "Apple", 0.5, 100),
+        Product(2, "Banana", 0.3, 150),
+        Product(3, "Milk", 1.2, 80)
+    ]
+
+    for product in products:
+        supermarket.add_product(product)
+
+    while True:
+        print("\n1. View Products\n2. Register User\n3. Add to Cart\n4. View Cart\n5. Checkout\n6. Exit")
+        choice = input("Enter your choice: ")
+
+        if choice == '1':
+            supermarket.view_products()
+        elif choice == '2':
+            email = input("Enter your email to register: ")
+            supermarket.register_user(email)
+        elif choice == '3':
+            email = input("Enter your registered email: ")
+            if email in supermarket.users:
+                user = supermarket.users[email]
+                product_id = int(input("Enter product ID to add to cart: "))
+                quantity = int(input("Enter quantity: "))
+                if product_id in supermarket.products and supermarket.products[product_id].stock >= quantity:
+                    user.add_to_cart(supermarket.products[product_id], quantity)
+                    print(f"Added {quantity} of {supermarket.products[product_id].name} to the cart.")
+                else:
+                    print("Product not available or insufficient stock.")
+            else:
+                print("User not registered.")
+        elif choice == '4':
+            email = input("Enter your registered email: ")
+            if email in supermarket.users:
+                user = supermarket.users[email]
+                user.view_cart(supermarket.products)
+            else:
+                print("User not registered.")
+        elif choice == '5':
+            email = input("Enter your registered email: ")
+            if email in supermarket.users:
+                user = supermarket.users[email]
+                receipt = user.checkout(supermarket.products)
+                supermarket.send_email(email, "Your Receipt", receipt)
+            else:
+                print("User not registered.")
+        elif choice == '6':
+            print("Exiting...")
+            break
+        else:
+            print("Invalid choice. Please try again.")
+
+if __name__ == "__main__":
+    main()
